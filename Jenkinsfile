@@ -2,19 +2,27 @@ pipeline {
     agent any
 
     tools {
-        maven 'Maven'  // Use the Maven tool configured in Jenkins
+        maven 'Maven'     // Adjust as per Jenkins tool config
+        jdk 'JDK'         // Adjust as per Jenkins tool config
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'master', url: 'https://github.com/rishx123/MyMavenGuavaApp.git'
+                git credentialsId: '42b7aada-7496-4388-bb42-97640354f8ff',
+                    url: 'https://github.com/rishx123/MyMavenGuavaApp.git'
             }
         }
 
         stage('Build') {
             steps {
                 sh 'mvn clean package'
+            }
+        }
+
+        stage('Debug: List Target Folder') {
+            steps {
+                sh 'ls -lh target'
             }
         }
 
@@ -26,17 +34,23 @@ pipeline {
 
         stage('Run Application') {
             steps {
-                sh 'java -jar target/MyMavenGuavaApp-1.0-SNAPSHOT.jar'
+                script {
+                    def jarFile = sh(script: 'find target -type f -name "*-jar-with-dependencies.jar" | head -n 1', returnStdout: true).trim()
+                    if (jarFile == "") {
+                        error("❌ Could not find fat JAR file!")
+                    }
+                    sh "java -jar ${jarFile}"
+                }
             }
         }
     }
 
     post {
         success {
-            echo 'Build and deployment successful!'
+            echo '✅ Build and execution succeeded!'
         }
         failure {
-            echo 'Build failed!'
+            echo '❌ Build failed!'
         }
     }
 }
